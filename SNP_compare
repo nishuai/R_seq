@@ -1,0 +1,78 @@
+#### comparison of distributions of SNPs in case and control samples in 8q24 region
+#### within 200 prostate cancer patients and 200 normal control
+source("http://bioconductor.org/biocLite.R")
+biocLite("VariantAnnotation")
+library(VariantAnnotation)
+setwd("your working directory")
+
+all_files=list.files()
+
+snp_case_8q24=data.frame()
+snp_case_8q24_count=data.frame()
+for (index in seq(3,369,2)){
+  print (index)
+  vcf=readVcf(all_files[index],'8q24_ref.fa')
+  filename=all_files[index]
+  filename=unlist(strsplit(filename, "_"))[1]
+  location=c();ref=c();alt=c();
+  string=names(rowData(vcf))
+  qual_value=rowData(vcf)$QUAL
+  length(string)->len_records
+    for (i in 1:len_records) {
+       ith_string=string[i]
+      location=append(location,unique(na.omit(as.numeric(unlist(strsplit(ith_string, "[^0-9]+"))))))
+      ref=append(ref,substr(ith_string,nchar(ith_string)-2,nchar(ith_string)-2))
+      alt=append(alt,substr(ith_string,nchar(ith_string),nchar(ith_string)))}
+  print (location); print (ref); print (alt)
+  if (length(location)!=0){
+  snp_case_8q24=rbind(snp_case_8q24,data.frame(filename,location,ref,alt,qual_value))
+  snp_case_8q24_count=rbind(snp_case_8q24_count,data.frame(filename,length(location)))}
+}
+
+snp_control_8q24=data.frame()
+snp_control_8q24_count=data.frame()
+for (index in seq(371,745,2)){
+  print (index)
+  vcf=readVcf(all_files[index],'8q24_ref.fa')
+  filename=all_files[index]
+  print (filename)
+  filename=unlist(strsplit(filename, "_"))[1]
+  location=c();ref=c();alt=c();
+  string=names(rowData(vcf))
+  qual_value=rowData(vcf)$QUAL
+  length(string)->len_records
+  for (i in 1:len_records) {
+    ith_string=string[i]
+    location=append(location,unique(na.omit(as.numeric(unlist(strsplit(ith_string, "[^0-9]+"))))))
+    ref=append(ref,substr(ith_string,nchar(ith_string)-2,nchar(ith_string)-2))
+    alt=append(alt,substr(ith_string,nchar(ith_string),nchar(ith_string)))}
+  print (location); print (ref); print (alt)
+  if (length(location)!=0){
+    snp_control_8q24=rbind(snp_control_8q24,data.frame(filename,location,ref,alt,qual_value))
+    snp_control_8q24_count=rbind(snp_control_8q24_count,data.frame(filename,length(location)))}
+}
+
+########################################################################################################
+count.table=data.frame()
+for (i in 1:8500){
+  if (i %in% snp_case_8q24[,2] | i %in% snp_control_8q24[,2]){
+    count.table=rbind(count.table,c(i,table(snp_case_8q24[,2])[as.character(i)],table(snp_control_8q24[,2])[as.character(i)]))
+  }
+}
+colnames(count.table)=c('SNP_loci','case','control')
+count.table[is.na(count.table)]=0
+
+library(MASS)
+chisq.test(count.table$case,count.table$control)
+plot(count.table$case,count.table$control,pch='*',col=c('black','red')[((count.table$case/count.table$control>2 | count.table$case/count.table$control<1/2) & count.table$case+count.table$control>20) +1],xlab='case',ylab='control')
+abline(0,2,col=4);abline(0,1/2,col=4)
+diff_index=((count.table$case/count.table$control>2 | count.table$case/count.table$control<1/2) & count.table$case+count.table$control>20)
+count.table[diff_index,]
+
+
+
+library(plotrix)
+addtable2plot(120,-1,as.data.frame(count.table[diff_index,]),bty="o",hlines=TRUE,vlines=TRUE)
+
+
+
