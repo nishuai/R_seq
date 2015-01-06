@@ -34,6 +34,22 @@ whole_gene=as.character(unique(diff_file$gene))
 whole_gene=whole_gene[whole_gene!='-']
 diff_gene=as.character(diff_file$gene[diff_file$p_value < 0.05])
 
+##################some of the names in whole_gene contain several synonyms separated by comma
+##################it causes confusion for GO gene name retrieval, so the first 
+##################name is left and others deleted
+name_revise=function(gene_set){
+  for (i in 1:length(gene_set)){
+   if (grepl(',',gene_set[i])){
+     index=which(strsplit(gene_set[i],'')[[1]]==',')[1]
+      gene_set[i]=substr(gene_set[i],1,index-1)
+  }
+}
+gene_set
+}
+
+whole_gene=name_revise(whole_gene)
+diff_gene=name_revise(diff_gene)
+
 ### initiate the files in required format
 
 genes=as.integer(whole_gene %in% diff_gene)
@@ -86,6 +102,8 @@ whole_gene=as.character(unique(diff_file$gene))
 whole_gene=whole_gene[whole_gene!='-']
 diff_gene=as.character(diff_file$gene[diff_file$p_value < 0.05])
 
+
+########################write file
 
 file_head=substr(which_file,1,nchar(which_file)-5)
 write(whole_gene,file=paste(file_head, "wholegenes.txt",sep="") ,sep='\n')
