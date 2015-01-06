@@ -1,0 +1,43 @@
+### use cummeRbund to do isoform analysis, gene expression level comparasion and stuff
+### first one needs to copy all files which Cuffdiff generates into a single folder and setdir() to that directory
+
+library(cummeRbund)
+cuff <- readCufflinks()
+cuff <- readCufflinks(rebuilt=T)
+cuff
+#make boxplot
+csBoxplot(genes(cuff))
+#get the top 100 diff expr geness
+gene.diff <- diffData(genes(cuff))
+gene.diff.top <- gene.diff[order(gene.diff$p_value),][1:100,]
+# gene ids of top 100 diff expr genes
+myGeneIds <- gene.diff.top$gene_id
+# get genes
+myGenes <- getGenes(cuff, myGeneIds)
+# make a heatmap
+csHeatmap(myGenes, cluster="both")
+csVolcano(genes(cuff))
+mySigGeneIds <- getSig(cuff,alpha=0.05,level='genes')
+head(mySigGeneIds)
+
+length(mySigGeneIds)
+
+mySigDeiIds <- getSig(cuff,alpha=0.05,level='isoforms')
+length(mySigDeiIds)
+
+mySigDetIds <- getSig(cuff,alpha=0.05,level='TSS')
+length(mySigDetIds)
+mySigDecIds <- getSig(cuff,alpha=0.05,level='CDS')
+length(mySigDecIds)
+
+diffData <- diffData(myDiffGenes)
+myDiffdata <- NULL
+myDiffdata <- diffData[order(diffData$q_value),]
+rep("up", length(myDiffdata$gene_id)) ->UpStr
+rep("down", length(myDiffdata$gene_id)) ->DownStr
+ifelse(myDiffdata$value_1<myDiffdata$value_2, UpStr, DownStr) -> UpDown
+diffGenes <- NULL
+diffGenes <- cbind(diffGenes, myDiffdata$gene_id)
+diffGenes <- cbind(diffGenes, UpDown)
+colnames(diffGenes )<-c("gene_id","UpDown")
+write.table(diffGenes ,".//sig.txt",sep="\t",col.names=T,row.names=F,quote=F)
