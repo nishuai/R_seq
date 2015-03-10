@@ -73,6 +73,13 @@ count.table[diff_index,]
 
 library(plotrix)
 addtable2plot(120,-1,as.data.frame(count.table[diff_index,]),bty="o",hlines=TRUE,vlines=TRUE)
-
-
+#####################################chi-square test for each position and plotting with significance in log space
+chiset=c()
+for (i in 1:length(count.table$case)) 
+{chiset=c(chiset,(chisq.test(matrix(c(184,188,count.table$case[i],count.table$control[i]),2))$p.value))}
+plot(count.table$case,count.table$control,pch=19,cex=chiset[,7],xlab='SNP occurance in prostate cancer patients',ylab='SNP occurance in normal control',
+     col=c('steelblue2',rgb(1,0,0,0.5) )[((count.table$case>count.table$control) & count.table$case+count.table$control>20) +1])
+legend(x=105,y=15,col=c(rgb(1,0,0,1/4),'steelblue2'),
+       legend=c('Cancer enriched','Normal enriched'), 
+       pch=c(19,19),bty = "n")
 
