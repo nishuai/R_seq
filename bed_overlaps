@@ -1,0 +1,36 @@
+library(GenomicRanges)
+library('gtools')
+###read tables
+
+enhancer=read.table('300ENSG_Cis.nif')
+enhancer=enhancer[,1:3]
+enhancer=unique(enhancer)
+
+
+erg=read.table('1203_ERG_sort_peaks.narrowPeak')
+erg=erg[,1:3]
+erg=unique(erg)
+
+###create granges objects
+gr_enhancer <- GRanges(seqnames = enhancer[,1],
+              ranges = IRanges(enhancer[,2], end = enhancer[,3]
+              ))
+gr_erg <- GRanges(seqnames = erg[,1],
+                       ranges = IRanges(erg[,2], end = erg[,3],
+                       ))
+
+### find the overlaps
+
+mtch=findOverlaps(gr_enhancer,gr_erg)
+matrix_mtch=as.matrix(mtch)
+countOverlaps(gr_enhancer, gr_erg)
+subsetByOverlaps(gr_enhancer,gr_erg)
+
+overlap=cbind(enhancer[matrix_mtch[,1],],erg[matrix_mtch[,2],])
+### write bed file 
+cbind(enhancer[matrix_mtch[,1],],1)
+
+write.table(cbind(enhancer[matrix_mtch[,1],],1),file="enhancer_overlap_erg.bed",sep="\t", col.names = F, row.names = F,quote = 
+              FALSE)
+write.table(cbind(erg[matrix_mtch[,2],],1),file="erg_overlap_enhancer.bed",sep="\t", col.names = F, row.names = F,quote = 
+              FALSE)
