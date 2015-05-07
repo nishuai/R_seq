@@ -1,30 +1,44 @@
+source("http://bioconductor.org/biocLite.R")
+biocLite("GenomicRanges")
+
 library(GenomicRanges)
 library('gtools')
 ###read tables
 
-enhancer=read.table('300ENSG_Cis.nif')
-enhancer=enhancer[,1:3]
+ss=read.table('2ETS.align',header=T)
+enhancer=ss[ss$eel_score>300 & ss$ets_score>20 & (ss$end-ss$start)<5000 ,]
+dim(enhancer)
+enhancer=unique(enhancer)
+
+##############leave only the first three columns of enhancer to build GRanges object and uniquify it
+
+enhancer=enhancer[,c(1,2,3,5,6,7)]
 enhancer=unique(enhancer)
 
 
-erg=read.table('1203_ERG_sort_peaks.narrowPeak')
-erg=erg[,1:3]
-erg=unique(erg)
-
-###create granges objects
+###create granges objects for predicted enhancers
 gr_enhancer <- GRanges(seqnames = enhancer[,1],
-              ranges = IRanges(enhancer[,2], end = enhancer[,3]
-              ))
+                       ranges = IRanges(enhancer[,2], end = enhancer[,3]),score=enhancer[,4],strand='+',
+                       ets=enhancer[,5],snp=enhancer[,6]
+                
+erg=read.table('68660_GABPA_sort_peaks.narrowPeak//68660_GABPA_sort_peaks.narrowPeak')
+erg=unique(erg)
 gr_erg <- GRanges(seqnames = erg[,1],
-                       ranges = IRanges(erg[,2], end = erg[,3],
-                       ))
+                  ranges = IRanges(erg[,2], end = erg[,3]),snpscore=erg[,5]
+                  )
 
 ### find the overlaps
 
 mtch=findOverlaps(gr_enhancer,gr_erg)
 matrix_mtch=as.matrix(mtch)
 countOverlaps(gr_enhancer, gr_erg)
-subsetByOverlaps(gr_enhancer,gr_erg)
+overlap=subsetByOverlaps(gr_enhancer,gr_erg)
+overlap=as.data.frame(overlap)
+overlap=cbind(overlap,'GABPA')
+colnames(overlap)[9]='factor'
+overlaps=rbind(overlaps,overlap)
+
+######
 
 overlap=cbind(enhancer[matrix_mtch[,1],],erg[matrix_mtch[,2],])
 ### write bed file 
@@ -34,3 +48,6 @@ write.table(cbind(enhancer[matrix_mtch[,1],],1),file="enhancer_overlap_erg.bed",
               FALSE)
 write.table(cbind(erg[matrix_mtch[,2],],1),file="erg_overlap_enhancer.bed",sep="\t", col.names = F, row.names = F,quote = 
               FALSE)
+
+
+Acitvities across chrosomes for each ETS transcription factors
