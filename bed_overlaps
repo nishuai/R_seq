@@ -1,8 +1,10 @@
 source("http://bioconductor.org/biocLite.R")
 biocLite("GenomicRanges")
-
+install.packages('ggplot2')
+install.packages('gtools')
+library(gtools)
 library(GenomicRanges)
-library('gtools')
+library(ggplot2)
 ###read tables
 
 ss=read.table('2ETS.align',header=T)
@@ -19,35 +21,60 @@ enhancer=unique(enhancer)
 ###create granges objects for predicted enhancers
 gr_enhancer <- GRanges(seqnames = enhancer[,1],
                        ranges = IRanges(enhancer[,2], end = enhancer[,3]),score=enhancer[,4],strand='+',
-                       ets=enhancer[,5],snp=enhancer[,6]
-                
-erg=read.table('68660_GABPA_sort_peaks.narrowPeak//68660_GABPA_sort_peaks.narrowPeak')
+                       ets=enhancer[,5],snp=enhancer[,6])
+                       
+####read all tables in as erg#####           
+erg=read.table('4809_FLI1_sort_peaks.narrowPeak//4809_FLI1_sort_peaks.narrowPeak')                     
 erg=unique(erg)
 gr_erg <- GRanges(seqnames = erg[,1],
-                  ranges = IRanges(erg[,2], end = erg[,3]),snpscore=erg[,5]
-                  )
-
-### find the overlaps
-
+ranges = IRanges(erg[,2], end = erg[,3]),snpscore=erg[,5])
+                       
+### find the overlaps                       
 mtch=findOverlaps(gr_enhancer,gr_erg)
 matrix_mtch=as.matrix(mtch)
 countOverlaps(gr_enhancer, gr_erg)
 overlap=subsetByOverlaps(gr_enhancer,gr_erg)
 overlap=as.data.frame(overlap)
-overlap=cbind(overlap,'GABPA')
+overlap=cbind(overlap,'FLI1')
 colnames(overlap)[9]='factor'
 overlaps=rbind(overlaps,overlap)
+                       
+######find overps with SNPs######
+                       
+overlaps_snp=overlaps[overlaps[,8]==1,]
 
-######
+#######plotting###############
+snp=as.factor(overlaps$snp)
+p=qplot(start,seqnames,data=overlaps, alpha=0.5,
+size =ets, color = factor(snp)) +scale_size_continuous(range = c(3, 7))+
+  scale_colour_manual(values = c("grey30", "red"))+geom_point(alpha = 0)
+p
 
-overlap=cbind(enhancer[matrix_mtch[,1],],erg[matrix_mtch[,2],])
+p_snp=qplot(start,seqnames,data=overlaps_snp, color=I('red'),
+        size =ets) +scale_size_continuous(range = c(3, 7))
+p_snp
+
+################################calculate SNP sites with factors####
+# and the acitvities across chrosomes for each ETS transcription factors##
+library(gtools)
+library(plyr)
+SNP_chro_count=ddply(overlaps_snp,.(seqnames,start),nrow)
+colnames(SNP_chro_count)[3]='count'
+## or use count function##
+## count(overlaps_snp,c("seqnames","start"))
+
+qplot(start,seqnames,size=count,data=SNP_chro_count,color=I('brown'))+scale_size_continuous(range = c(4, 10))
+SNP_chro_count_factors=aggregate(factor~seqnames+start,data=overlaps_snp,function(x){x<-paste(x,sep=",")})
+
+                      
 ### write bed file 
+                       
 cbind(enhancer[matrix_mtch[,1],],1)
-
+                       
+                       
 write.table(cbind(enhancer[matrix_mtch[,1],],1),file="enhancer_overlap_erg.bed",sep="\t", col.names = F, row.names = F,quote = 
-              FALSE)
+                                     FALSE)
+                    
 write.table(cbind(erg[matrix_mtch[,2],],1),file="erg_overlap_enhancer.bed",sep="\t", col.names = F, row.names = F,quote = 
-              FALSE)
+                                     FALSE)
 
-
-Acitvities across chrosomes for each ETS transcription factors
