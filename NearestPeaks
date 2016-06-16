@@ -1,0 +1,71 @@
+
+InterGrange=function(Grange1, Grange2){
+    ###Taking Two Granges list Grange1 and Grange2, InterGrange check the overlaping
+    ###for every element in Grange1 to see if it overlaps with any element in Grange2
+    ###in an efficnent manner.
+    try(if(class(Grange1)!='GRanges' | class(Grange2)!='GRanges') stop("Both inputs have to be 'GRanges' objects"))
+    if (!('geneID' %in% names(mcols(Grange1)) | 'geneID' %in% names(mcols(Grange2)))){
+    stop('Please make sure both Granges objects have a common gene identifier called "geneID"')
+    }
+    
+    Pos=order(Grange1$geneID, start(Grange1))
+    G_ordered1=Grange1[Pos]
+    G_ordered2=Grange2[order(Grange2$geneID)]
+    I=G_ordered1[G_ordered1$geneID %in% G_ordered2$geneID]
+    K=G_ordered2[G_ordered2$geneID %in% G_ordered1$geneID]
+    if(length(I) ==0 | length(K)==0) {Intersect= rep(FALSE, length(I))
+    } else {
+        runI=c(0,cumsum(rle(as.vector(I$geneID))$length))
+        runK=c(0,cumsum(rle(as.vector(K$geneID))$length))
+        Intersect=c()
+        for (i in 1:(length(runK)-1)){
+            query1=I[(runI[i]+1):(runI[i+1])]
+            query2=K[(runK[i]+1):(runK[i+1])]
+            L=sapply(query1, function(x) {
+            pintersect(query2, x)$hit
+        })
+        if (length(query2)==1){
+            Intersect=c(Intersect, L)
+        } else Intersect=c(Intersect, colSums(as.matrix(L, byrow=FALSE))>0)
+        }
+    }
+    J=rep(NA, length(G_ordered1))
+    J[!(G_ordered1$geneID %in% G_ordered2$geneID)]=FALSE
+    J[(G_ordered1$geneID %in% G_ordered2$geneID)]=Intersect
+    J[order(Pos)]
+}
+
+##For each transcription start site (TSS), find the nearest eCLIP peak in the same gene.
+
+NearestPeak=function(TSS, Peak){
+    ###Taking Two Granges list Grange1 and Grange2, InterGrange check the overlaping
+    ###for every element in Grange1 to see if it overlaps with any element in Grange2
+    ###in an efficnent manner.
+    if(class(Peak)!='GRanges' | class(TSS) !='GRanges') stop("TSS and Peak have to be 'GRanges' objects")
+    if (!('geneID' %in% names(mcols(Peak)) | 'geneID' %in% names(mcols(TSS)))){
+    stop('Please make sure both objects have a common gene identifier called "geneID"')
+    }
+    
+    Pos=order(TSS$geneID)
+    TSS=TSS[Pos]
+    Peak=Peak[order(Peak$geneID)]
+    K=TSS[TSS$geneID %in% Peak$geneID]
+    I=Peak[Peak$geneID %in% TSS$geneID]
+    runK=c(0,cumsum(rle(as.vector(K$geneID))$length))
+    runI=c(0,cumsum(rle(as.vector(I$geneID))$length))
+    Intersect=c()
+    for (i in 1:(length(runK)-1)){
+        query1=K[(runK[i]+1):(runK[i+1])]
+        query2=I[(runI[i]+1):(runI[i+1])]
+        L=sapply(query2$peak, function(x) abs(query1$TSS-x))
+        if (class(L)=='integer') {PeakIndex=(which.min(L))
+        } else {PeakIndex=apply(L, 1, function(x) which.min(x))}
+        Intersect=c(Intersect, query2$peak[PeakIndex])
+    }
+    ####Not Finished
+    ####For each TSS find the cloest peak
+    J=rep(NA, length(TSS))
+    J[(TSS$geneID %in% Peak$geneID)]=Intersect
+    J[order(Pos)]
+}
+
