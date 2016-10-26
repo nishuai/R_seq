@@ -1,0 +1,35 @@
+
+####### Transfer codon information from tRNA_codons to tRNA_GTF
+
+#### it seems that the two annotation files have no common areas, write a GTF file using the tRNA-codons file
+# file.create('tRNA_gtf_gtRNAdb.txt')
+# for (i in 1:nrow(tRNA_codons)){
+#     cat(tRNA_codons[i,3], file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat('\t', file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat('ENSEMBL', file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat('\t', file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat('tRNA', file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat('\t', file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat(tRNA_codons[i,5], file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat('\t', file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat(tRNA_codons[i,6], file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat('\t', file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat('.', file='tRNA_gtf_gtRNAdb.txt', append=TRUE) 
+#     cat('\t', file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat(tRNA_codons[i,4], file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat('\t', file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat('.', file='tRNA_gtf_gtRNAdb.txt', append=TRUE) 
+#     cat('\t', file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat(paste0('gene_id ', paste0('\"tRNA',as.character(i),'\"', ';'),
+#                 ' transcript_id ', paste0('\"tRNA',as.character(i),'\"', ';'),
+#                 ' gene_type ', paste0('\"tRNA\"', ';'), 
+#                 ' gene_status ', paste0('\"NULL\"', ';'), 
+#                 ' gene_name ', paste0('\"tRNA',as.character(i),'\"', ';'), 
+#                 ' transcript_type ', paste0('\"tRNA\"', ';'), 
+#                 ' transcript_status ', paste0('\"NULL\"', ';'), 
+#                 ' transcript_name ', paste0('\"tRNA',as.character(i),'\"', ';'), 
+#                 ' level ',paste0(3, ';')), file='tRNA_gtf_gtRNAdb.txt', append=TRUE)
+#     cat('\n', file='tRNA_gtf_gtRNAdb.txt',append=TRUE)
+# }
+
+#### GTF file made from lifted coordinates does not have many reads map to it(roughly 20% the amount when using ENCODE tRNA GTF file)
