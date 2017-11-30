@@ -1,0 +1,118 @@
+######Downloads everything form ECLIP database and computes significant binding regions on RNA
+
+library(rtracklayer)
+library(ChIPpeakAnno)
+library(org.Hs.eg.db)
+library(GenomicAlignments)
+####author: Ni Shuai and Bernd Fischer
+###read the metadata for all downloaded data
+load('~/wrk/bernd/eCLIP/eCLIPannotation.rda')
+###remove columns that are the same for every row, they are not informative
+rm_redunt_col=function(Df){
+    I=apply(Df, 2, function(x) length(unique(x)))
+    Df[,I!=1]
+}
+###clean up the meta file for peaks
+peaks=eCLIPannotation
+peaks=peaks[peaks$Biosample.term.name !='adrenal gland',]
+peaks=rm_redunt_col(peaks)
+peaks$sample_name=unlist(strsplit(peaks$Experiment.target, split='-'))[c(TRUE, FALSE)]
+peaks$sample_name=paste(peaks$sample_name, peaks$Biosample.term.name, sep='-')
+peaks$sample_name
+
+####get peaks into one single target file
+
+
+peak_files=list.files('~/wrk/bernd/eCLIP/bed/')
+peak_files_accession=unlist(strsplit(peak_files, split='[.]'))[c(TRUE,FALSE,FALSE)]
+
+bam_files=list.files('~/wrk/bernd/eCLIP/bam/')
+bam_files_accession=unlist(strsplit(bam_files, split='[.]'))[c(TRUE,FALSE)]
+length(bam_files_accession)/3
+length(peak_files_accession)/2
+
+####for each protein-cellline combination find the corresponding peak and bam file
+
+extraCols_narrowPeak <- c(sigvalue= "numeric", pValue = "numeric",
+                          qValue = "numeric", peak = "integer") 
+import.narrowPeak <- function(... ) {
+    import(..., format="bed", extraCols=extraCols_narrowPeak)
+}
+
+
+###function that finds corresponding file accession for each protein-cellline combination
+
+getBam=function(sample_name){
+    peaks$File.accession[peaks$File.format=='bam' & peaks$sample_name==sample_name]
+}
+getBed=function(sample_name){
+    peaks$File.accession[peaks$File.format=='bed narrowPeak' & peaks$sample_name==sample_name]
+}
+getMockbam=function(sample_name){
+    protein=unlist(strsplit(sample_name, split='-'))[1]
+    cellline=unlist(strsplit(sample_name, split='-'))[2]
+    peaks$File.accession[peaks$File.format=='bam' & 
+                             grepl('eCLIP mock', peaks$sample_name) & grepl(protein, peaks$sample_name)]
+}
+getMockbam(sample_name)
+##get all experiment names
+Exps=unique(peaks$sample_name[-grep('input', peaks$sample_name)])
+
+for (i in 79:length(Exps)){
+    ##define sample to work with
+    sample_name=Exps[i]
+    ##import 2 bed files for that sample
+    x1 <-import.narrowPeak(file.path('~/wrk/bernd/eCLIP/bed', paste0(getBed(sample_name)[1], '.bed.gz')))
+    x2 <-import.narrowPeak(file.path('~/wrk/bernd/eCLIP/bed', paste0(getBed(sample_name)[2], '.bed.gz')))
+    ###find overlapped regions
+    x=findOverlapsOfPeaks(x1, x2, minoverlap = 10, maxgap = 0, ignore.strand = FALSE)
+    overlaps=x$peaklist[["x1///x2"]]
+    ###get the coverage from corresponding bam files
+    bamFileA <-file.path('~/wrk/bernd/eCLIP/bam', paste0(getBam(sample_name)[1], '.bam'))
+    bamFileB <-file.path('~/wrk/bernd/eCLIP/bam', paste0(getBam(sample_name)[2], '.bam'))
+    bamFileMock <-file.path('~/wrk/bernd/eCLIP/bam', paste0(getMockbam(sample_name), '.bam'))
+    ###get coverage from 2 biological replicates
+    coverage <- summarizeOverlaps(features = overlaps, 
+                  reads = c(bamFileA, bamFileB),
+                  mode=Union, 
+                  ignore.strand = FALSE, 
+                  singleEnd=TRUE)
+    
+    ###get coverage from Mock input
+    Mockcoverage <- summarizeOverlaps(features = overlaps, 
+                  reads = bamFileMock,
+                  mode=Union, 
+                  ignore.strand = FALSE, 
+                  singleEnd=TRUE)
+
+    overlaps$coverage1=assay(coverage)[,1]
+    overlaps$coverage2=assay(coverage)[,2]
+    overlaps$coverageMock=assay(Mockcoverage)[,1]
+
+    ###annotate those overlaps
+    data(TSS.human.GRCh38)
+    anno <- annotatePeakInBatch(overlaps, AnnotationData=TSS.human.GRCh38)
+    ##remove rare cases that genes overlap with each other, in this case only one gene is taken
+    anno=anno[!duplicated(anno$peak),]
+    anno <- addGeneIDs(annotatedPeak=anno, 
+                            orgAnn="org.Hs.eg.db", 
+                            IDs2Add="symbol")
+
+    ###do Deseq analysis
+    counttable=data.frame(coverage1=overlaps$coverage1,coverage2=overlaps$coverage2, coverageMock=overlaps$coverageMock)
+    rownames(counttable)=names(anno)
+    coldata=data.frame(condition=c('treated','treated','untreated'), type=c('paired-end','paired-end','paired-end'))
+    rownames(coldata)=names(counttable)
+    
+    dds <- DESeqDataSetFromMatrix(countData =counttable,
+                                  colData = coldata,
+                                  design = ~ condition)
+    
+    
+    dds=DESeq(dds)
+    res=results(dds)
+    pack=list(dds=dds, res=res, peaks=anno)
+    saveRDS(pack,file.path('results', paste0(sample_name, '.rds')))
+}
+
+
