@@ -1,0 +1,41 @@
+###############################################################
+# defining cutoff value at 0.99999 confidence for haploid SNP
+# VS. real mutation rates
+# Author: Ni Shuai nishuai@yahoo.com
+# YuceBio R&D department
+# Input: patient panel sequencing sample in pileup atgc format
+# output one cutoff value around 0.2~0.3
+#################################################################
+rates=list()
+for (i in list.files('test/', pattern = 'pileups.freq$')){ 
+  patient=read.table(file.path('test/', i), header = TRUE)
+  patient_rate=patient[,5:8]/patient$read.depth
+  patient_rate[,'A'][patient$ref_base=='A']=0
+  patient_rate[,'G'][patient$ref_base=='G']=0
+  patient_rate[,'C'][patient$ref_base=='C']=0
+  patient_rate[,'T'][patient$ref_base=='T']=0
+  rates[[i]]=as.matrix(patient_rate)
+}
+rates=do.call('rbind', rates)
+
+aa=as.vector(as.matrix(rates))
+bb=density(log10(aa))
+
+###the local minimium of rate 
+slide_window=40
+I=which.min(sapply(1:(length(bb$y)-slide_window), function(x){
+  sum(bb$y[x:(x+slide_window)])}))+round(slide_window/2)
+soft_cutoff=10**bb$x[I]
+
+###fit a mixture of 2 normal distributions (2 SNP muration rates,
+###haploid and diploid SNPs)
+###defind the goodness of fit, the sigmal of haploid SNP should 
+###roughly double the value of deploid SNPs
+library(mixtools)
+aa=as.vector(as.matrix(rates))
+aa=aa[aa>soft_cutoff]
+mixture<-normalmixEM(aa,k=2, mu = c(0.5, 1), verb = FALSE) 
+mixture$sigma 
+##qnrom(0.00001)=4.26
+lower_bound=c(lower_bound, mixture$mu[1]-4.26*mixture$sigma[1])
+cutoff=lower_bound
