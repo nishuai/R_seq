@@ -1,7 +1,6 @@
 ###ctDNA_training uses multipe ML algorithms trying to 
 ###predict the esiitance of ctDNA for cancer early diagnosis
 ###and to selecte the most promissing features for prediction
-setwd('D:/wrk/TNER-master/')
 library(randomForest)
 library(MASS)
 source('R/get_features.R')##this function also loads find_cutoff function
