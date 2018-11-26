@@ -1,4 +1,4 @@
-###ctDNA_training uses multipe ML algorithms trying to 
+###ctDNA_training uses multipe ML algorithms aimming to 
 ###predict the esiitance of ctDNA for cancer early diagnosis
 ###and to selecte the most promissing features for prediction
 library(randomForest)
